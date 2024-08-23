@@ -1,10 +1,11 @@
+import 'dart:async';
 import 'package:background_sms/background_sms.dart';
 import 'package:flutter/material.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:geocoding/geocoding.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:permission_handler/permission_handler.dart';
-import 'package:sqflite/sqflite.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:women_safety/components/primaryButton.dart';
 import 'package:women_safety/db/db_services.dart';
 import 'package:women_safety/model/contactsm.dart';
@@ -19,49 +20,171 @@ class Safehome extends StatefulWidget {
 class _SafehomeState extends State<Safehome> {
   Position? _currentPosition;
   String? _currentAddress;
-  LocationPermission? permission;
+  bool _isFetchingLocation = true;
+  int? _selectedSimSlot;
+  StreamSubscription<Position>? _positionStreamSubscription;
 
-  _getPermission() async => await [Permission.sms].request();
+  @override
+  void initState() {
+    super.initState();
+    _getPermission();
+    _startLocationTracking();
+    _loadSimSlot();
+  }
+
+  @override
+  void dispose() {
+    _positionStreamSubscription?.cancel();
+    super.dispose();
+  }
+
+  _getPermission() async {
+    var status = await Permission.sms.status;
+    if (status.isDenied || status.isPermanentlyDenied) {
+      await [Permission.sms, Permission.location].request();
+    }
+  }
+
   _isPermissionGranted() async => await Permission.sms.status.isGranted;
 
-  _sendSms(String phoneNumber, String message, {int? simSlot}) async {
-    var result = await BackgroundSms.sendMessage(
-      phoneNumber: phoneNumber,
-      message: message,
-      simSlot: simSlot,
-    ).then((SmsStatus status) {
-      if (status == SmsStatus.sent) {
-        Fluttertoast.showToast(msg: "Message sent");
-      } else {
-        Fluttertoast.showToast(msg: "Message failed");
-      }
+  _loadSimSlot() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    setState(() {
+      _selectedSimSlot = prefs.getInt('simSlot');
     });
   }
 
-  _getCurrentLocation() async {
+  _saveSimSlot(int simSlot) async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    await prefs.setInt('simSlot', simSlot);
+    setState(() {
+      _selectedSimSlot = simSlot;
+    });
+  }
+
+  Future<void> _sendSms(String phoneNumber, String message) async {
+    if (_selectedSimSlot == null) {
+      // If SIM slot is not selected, prompt the user
+      await _selectSimSlot();
+    }
+
+    if (_selectedSimSlot != null) {
+      var result = await BackgroundSms.sendMessage(
+        phoneNumber: phoneNumber,
+        message: message,
+        simSlot: _selectedSimSlot!,
+      );
+
+      if (result == SmsStatus.sent) {
+        Fluttertoast.showToast(msg: "Message sent through SIM ${_selectedSimSlot! + 1}");
+      } else {
+        Fluttertoast.showToast(msg: "Message failed to send");
+      }
+    }
+  }
+
+  Future<void> _selectSimSlot() async {
+    await showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text("Select SIM Slot"),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ListTile(
+                title: Text("SIM 1"),
+                onTap: () {
+                  _saveSimSlot(0);
+                  Navigator.pop(context);
+                },
+              ),
+              ListTile(
+                title: Text("SIM 2"),
+                onTap: () {
+                  _saveSimSlot(1);
+                  Navigator.pop(context);
+                },
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  void _startLocationTracking() {
+    LocationSettings locationSettings = LocationSettings(
+      accuracy: LocationAccuracy.medium, // Adjust accuracy as needed
+    );
+
+    // For Android devices
+    AndroidSettings androidSettings = AndroidSettings(
+      accuracy: LocationAccuracy.medium, // Adjust accuracy as needed
+      distanceFilter: 10, // Distance in meters before a location change event is fired
+    );
+
+    // For iOS devices
+    AppleSettings appleSettings = AppleSettings(
+      accuracy: LocationAccuracy.medium, // Adjust accuracy as needed
+      distanceFilter: 10, // Distance in meters before a location change event is fired
+    );
+
+    _positionStreamSubscription = Geolocator.getPositionStream(
+      locationSettings: locationSettings,
+    ).listen((Position position) {
+      setState(() {
+        _currentPosition = position;
+        _fetchAddress(); // Separate method to fetch and update address
+      });
+    });
+  }
+
+  Future<void> _fetchAddress() async {
+    if (_currentPosition == null) return;
     try {
       List<Placemark> placemarks = await placemarkFromCoordinates(
         _currentPosition!.latitude,
         _currentPosition!.longitude,
       );
-
+      if (!mounted) return;
       Placemark place = placemarks[0];
       setState(() {
-         _currentAddress= "${place.locality}, ${place.postalCode},${place.street}";
+        _currentAddress = "${place.locality}, ${place.postalCode}, ${place.street}";
+        _isFetchingLocation = false;
       });
     } catch (e) {
-      Fluttertoast.showToast(msg: e.toString());
+      if (mounted) {
+        Fluttertoast.showToast(msg: "Failed to get address: $e");
+        setState(() {
+          _isFetchingLocation = false;
+        });
+      }
     }
   }
 
-  @override
-  void initState( ){
-    super.initState();
-    _getPermission();
-    _getCurrentLocation();
+  Future<void> _sendLocationToContacts() async {
+    if (_isFetchingLocation) {
+      Fluttertoast.showToast(msg: "Fetching location, please wait...");
+      return;
+    }
+
+    if (_currentPosition == null) {
+      Fluttertoast.showToast(msg: "Location is not available.");
+      return;
+    }
+
+    String messageBody = "https://www.google.com/maps/search/?api=1&query=${_currentPosition!.latitude}%2C${_currentPosition!.longitude}. $_currentAddress";
+
+    if (await _isPermissionGranted()) {
+      List<Tcontact> contactList = await DatabaseHelper().getContactList();
+      for (Tcontact contact in contactList) {
+        await _sendSms(contact.number, "I am in trouble, please reach me at $messageBody");
+      }
+    } else {
+      Fluttertoast.showToast(msg: "SMS permission not granted.");
+    }
   }
-
-
 
   showModalSafeHome(BuildContext context) {
     showModalBottomSheet(
@@ -87,32 +210,15 @@ class _SafehomeState extends State<Safehome> {
                   style: TextStyle(fontSize: 20),
                 ),
                 SizedBox(height: 10),
-                if(_currentPosition!=null) Text(_currentAddress!),
-                primaryButton(onPressed: () {
-                  _getCurrentLocation();
-                }, title: "GET LOCATION"),
+                if (_isFetchingLocation)
+                  CircularProgressIndicator()
+                else if (_currentAddress != null)
+                  Text(_currentAddress!),
                 SizedBox(height: 10),
-                primaryButton(onPressed: () async{
-                  List<Tcontact> contactList= await DatabaseHelper().getContactList();
-                  String recipients = "";
-                  int i =1;
-                  for (Tcontact contact in contactList) {
-                    recipients+=contact.number;
-                    if (i!=contactList.length) {
-                      recipients+=";";
-                      i++;
-                    }
-                  }
-                  String messageBody="https://www.google.com/maps/search/?api=1&query=${_currentPosition!.latitude}%2C${_currentPosition!.longitude}. $_currentAddress";
-                  if (await _isPermissionGranted()) {
-                    contactList.forEach((element){
-                      _sendSms("${element.number}", "I am in trouble please reach me out at $messageBody",simSlot: 1);
-                    });
-                  }
-                  else{
-                    Fluttertoast.showToast(msg: "something wrong");
-                  }
-                }, title: "SEND ALERT"),
+                primaryButton(
+                  onPressed: () => _sendLocationToContacts(),
+                  title: "SEND ALERT",
+                ),
               ],
             ),
           ),
