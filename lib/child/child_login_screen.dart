@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:women_safety/child/bottom_page.dart';
 import 'package:women_safety/components/custom_textfield.dart';
 import 'package:women_safety/components/primaryButton.dart';
 import 'package:women_safety/components/secondaryButton.dart';
@@ -48,7 +49,7 @@ class _LoginScreenState extends State<LoginScreen> {
         MySharedPrefference.saveUserType('child');
 
       Navigator.of(context).pushReplacement(
-      MaterialPageRoute(builder: (context) => HomeScreen()),
+      MaterialPageRoute(builder: (context) => BottomPage()),
     );
 
       }

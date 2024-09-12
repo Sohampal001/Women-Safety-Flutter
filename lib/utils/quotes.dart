@@ -1,10 +1,5 @@
 List<String> sweetSayings = [
-  "Your presence lights up the whole room",
-  "We admire your strong personality.",
-  "We’ll help you in any way we can.",
-  "You are strong and courageous.",
-  'I say if I’m beautiful. I say if I’m strong.',
-  'Above all, be the heroine of your life, not the victim.',
+  "Surakhsha",
 ];
 
 List<String> articleTitle = [

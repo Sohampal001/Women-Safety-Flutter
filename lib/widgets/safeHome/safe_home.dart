@@ -150,7 +150,7 @@ class _SafehomeState extends State<Safehome> {
       if (!mounted) return;
       Placemark place = placemarks[0];
       setState(() {
-        _currentAddress = "${place.locality}, ${place.postalCode}, ${place.street}";
+        _currentAddress = "${place.locality}, ${place.postalCode}, ${place.subLocality}";
         _isFetchingLocation = false;
       });
     } catch (e) {
@@ -168,6 +168,7 @@ class _SafehomeState extends State<Safehome> {
       Fluttertoast.showToast(msg: "Fetching location, please wait...");
       return;
     }
+    
 
     if (_currentPosition == null) {
       Fluttertoast.showToast(msg: "Location is not available.");
@@ -186,6 +187,7 @@ class _SafehomeState extends State<Safehome> {
     }
   }
 
+  
   showModalSafeHome(BuildContext context) {
     showModalBottomSheet(
       context: context,
