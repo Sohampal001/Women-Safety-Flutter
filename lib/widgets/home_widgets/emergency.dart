@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:women_safety/widgets/emergencies/AmbulanceEmergency.dart';
 import 'package:women_safety/widgets/emergencies/firebridgateemergency.dart';
+import 'package:women_safety/widgets/emergencies/nearest_users.dart';
 import 'package:women_safety/widgets/emergencies/policeemergency.dart';
 import 'package:women_safety/widgets/emergencies/womenhelpline.dart';
 
@@ -16,10 +17,12 @@ class Emergency extends StatelessWidget {
         physics: BouncingScrollPhysics(),
         scrollDirection: Axis.horizontal,
         children: [
+          NearestUsers(),
           PoliceEmergency(),
           womenhelpline(),
           AmbulanceEmergency(),
           firebridgateemergency(),
+          
 
         ],
       ),

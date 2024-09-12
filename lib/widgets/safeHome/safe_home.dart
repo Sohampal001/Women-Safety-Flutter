@@ -64,7 +64,6 @@ class _SafehomeState extends State<Safehome> {
 
   Future<void> _sendSms(String phoneNumber, String message) async {
     if (_selectedSimSlot == null) {
-      // If SIM slot is not selected, prompt the user
       await _selectSimSlot();
     }
 
@@ -115,19 +114,17 @@ class _SafehomeState extends State<Safehome> {
 
   void _startLocationTracking() {
     LocationSettings locationSettings = LocationSettings(
-      accuracy: LocationAccuracy.medium, // Adjust accuracy as needed
+      accuracy: LocationAccuracy.medium,
     );
 
-    // For Android devices
     AndroidSettings androidSettings = AndroidSettings(
-      accuracy: LocationAccuracy.medium, // Adjust accuracy as needed
-      distanceFilter: 10, // Distance in meters before a location change event is fired
+      accuracy: LocationAccuracy.medium,
+      distanceFilter: 10,
     );
 
-    // For iOS devices
     AppleSettings appleSettings = AppleSettings(
-      accuracy: LocationAccuracy.medium, // Adjust accuracy as needed
-      distanceFilter: 10, // Distance in meters before a location change event is fired
+      accuracy: LocationAccuracy.medium,
+      distanceFilter: 10,
     );
 
     _positionStreamSubscription = Geolocator.getPositionStream(
@@ -135,7 +132,7 @@ class _SafehomeState extends State<Safehome> {
     ).listen((Position position) {
       setState(() {
         _currentPosition = position;
-        _fetchAddress(); // Separate method to fetch and update address
+        _fetchAddress();
       });
     });
   }
@@ -168,7 +165,6 @@ class _SafehomeState extends State<Safehome> {
       Fluttertoast.showToast(msg: "Fetching location, please wait...");
       return;
     }
-    
 
     if (_currentPosition == null) {
       Fluttertoast.showToast(msg: "Location is not available.");
@@ -187,7 +183,10 @@ class _SafehomeState extends State<Safehome> {
     }
   }
 
-  
+  void triggerSOS() async {
+    await _sendLocationToContacts();
+  }
+
   showModalSafeHome(BuildContext context) {
     showModalBottomSheet(
       context: context,

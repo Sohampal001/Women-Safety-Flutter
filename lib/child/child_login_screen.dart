@@ -6,11 +6,10 @@ import 'package:women_safety/components/custom_textfield.dart';
 import 'package:women_safety/components/primaryButton.dart';
 import 'package:women_safety/components/secondaryButton.dart';
 import 'package:women_safety/child/register_child.dart';
-import 'package:women_safety/db/shared_pref.dart';
+import 'package:women_safety/db/shared_pref.dart'; // For storing user preferences
 import 'package:women_safety/parent/parent_home_screen.dart';
 import 'package:women_safety/parent/parent_register_screen.dart';
 import 'package:women_safety/utils/constants.dart';
-
 import 'package:women_safety/child/bottom_screens/child_home_page.dart'; 
 
 class LoginScreen extends StatefulWidget {
@@ -24,64 +23,70 @@ class _LoginScreenState extends State<LoginScreen> {
   final _fromData = Map<String, Object>();
   bool isLoading = false;
 
+  // Function to handle login submission
   _onSubmit() async {
-  if (!_formKey.currentState!.validate()) return;
+    if (!_formKey.currentState!.validate()) return;
 
-  _formKey.currentState!.save();
-  try {
-    progressIndicator(context);
-    UserCredential userCredential = await FirebaseAuth.instance
-        .signInWithEmailAndPassword(
-      email: _fromData["email"].toString(),
-      password: _fromData["Password"].toString(),
-    );
-    FirebaseFirestore.instance.collection('users')
-    .doc(userCredential.user!.uid)
-    .get()
-    .then((Value){
-      if (Value['type']=='parent') {
-        MySharedPrefference.saveUserType('parent');
-        Navigator.of(context).pushReplacement(
-      MaterialPageRoute(builder: (context) => ParentHomeScreen()),
-    );
+    _formKey.currentState!.save();
+    try {
+      // Show loading indicator
+      progressIndicator(context);
+
+      // Firebase Authentication
+      UserCredential userCredential = await FirebaseAuth.instance
+          .signInWithEmailAndPassword(
+        email: _fromData["email"].toString(),
+        password: _fromData["Password"].toString(),
+      );
+
+      // Save user's email in SharedPreferences
+      await MySharedPrefference.saveUserEmail(_fromData["email"].toString());
+
+      // Retrieve user type from Firestore and navigate based on the user type
+      FirebaseFirestore.instance.collection('users')
+          .doc(userCredential.user!.uid)
+          .get()
+          .then((value) {
+        if (value['type'] == 'parent') {
+          MySharedPrefference.saveUserType('parent');
+
+          // Navigate to ParentHomeScreen
+          Navigator.of(context).pushReplacement(
+            MaterialPageRoute(builder: (context) => ParentHomeScreen()),
+          );
+        } else {
+          MySharedPrefference.saveUserType('child');
+
+          // Navigate to BottomPage for child users
+          Navigator.of(context).pushReplacement(
+            MaterialPageRoute(builder: (context) => BottomPage()),
+          );
+        }
+      });
+    } on FirebaseAuthException catch (e) {
+      Navigator.of(context).pop(); // Close the loading indicator
+
+      // Handle different login errors
+      if (e.code == 'user-not-found') {
+        dialogBox(context, 'No user found for that email.');
+      } else if (e.code == 'wrong-password') {
+        dialogBox(context, 'Wrong password provided for that user.');
+      } else if (e.code == 'invalid-email') {
+        dialogBox(context, 'The email address is badly formatted.');
+      } else if (e.code == 'user-disabled') {
+        dialogBox(context, 'This user has been disabled.');
+      } else if (e.code == 'operation-not-allowed') {
+        dialogBox(context, 'Operation not allowed. Please contact support.');
+      } else if (e.code == 'too-many-requests') {
+        dialogBox(context, 'Too many attempts to sign in. Please try again later.');
+      } else {
+        dialogBox(context, 'An unknown error occurred: ${e.message}');
       }
-      else{
-        MySharedPrefference.saveUserType('child');
-
-      Navigator.of(context).pushReplacement(
-      MaterialPageRoute(builder: (context) => BottomPage()),
-    );
-
-      }
-    });
-    // Navigator.of(context).pushReplacement(
-    //   MaterialPageRoute(builder: (context) => HomeScreen()),
-    // );
-
-  } on FirebaseAuthException catch (e) {
-    Navigator.of(context).pop(); // Close the progress indicator
-
-    if (e.code == 'user-not-found') {
-      dialogBox(context, 'No user found for that email.');
-    } else if (e.code == 'wrong-password') {
-      dialogBox(context, 'Wrong password provided for that user.');
-    } else if (e.code == 'invalid-email') {
-      dialogBox(context, 'The email address is badly formatted.');
-    } else if (e.code == 'user-disabled') {
-      dialogBox(context, 'This user has been disabled.');
-    } else if (e.code == 'operation-not-allowed') {
-      dialogBox(context, 'Operation not allowed. Please contact support.');
-    } else if (e.code == 'too-many-requests') {
-      dialogBox(context, 'Too many attempts to sign in. Please try again later.');
-    } else {
-      dialogBox(context, 'An unknown error occurred: ${e.message}');
+    } catch (e) {
+      Navigator.of(context).pop(); // Close the loading indicator
+      dialogBox(context, 'An error occurred: $e');
     }
-  } catch (e) {
-    Navigator.of(context).pop();
-    dialogBox(context, 'An error occurred: $e');
   }
-}
-
 
   @override
   Widget build(BuildContext context) {
@@ -111,7 +116,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   },
                   validate: (email) {
                     if (email!.isEmpty || email.length < 3 || !email.contains("@")) {
-                      return " Enter correct Email";
+                      return "Enter correct Email";
                     }
                     return null;
                   },
@@ -125,7 +130,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   },
                   validate: (Password) {
                     if (Password!.isEmpty || Password.length < 7) {
-                      return " Enter correct Password";
+                      return "Enter correct Password";
                     }
                     return null;
                   },
@@ -159,15 +164,11 @@ class _LoginScreenState extends State<LoginScreen> {
                   ],
                 ),
                 secondaryButton(
-                    title: "Register As child",
+                    title: "Register as a New",
                     onPressed: () {
                       goTo(context, RegisterChildScreen());
                     }),
-                secondaryButton(
-                    title: "Register  As Parent",
-                    onPressed: () {
-                      goTo(context, RegisterParentScreen());
-                    }),
+                
               ],
             ),
           ),

@@ -7,6 +7,7 @@ import 'package:women_safety/components/secondaryButton.dart';
 import 'package:women_safety/child/child_login_screen.dart';
 import 'package:women_safety/model/user_model.dart';
 import 'package:women_safety/utils/constants.dart';
+import 'package:geolocator/geolocator.dart'; // Geolocator for fetching location
 
 class RegisterChildScreen extends StatefulWidget {
   @override
@@ -16,13 +17,43 @@ class RegisterChildScreen extends StatefulWidget {
 class _RegisterChildScreenState extends State<RegisterChildScreen> {
   bool isPasswordShown = false;
   bool isRetypePasswordShown = false;
-  
+
   final _formKey = GlobalKey<FormState>();
-  final Map<String, String> _formData = {};
+  final Map<String, String?> _formData = {};
+
+  // Method to get current location
+  Future<Position?> _determinePosition() async {
+    bool serviceEnabled;
+    LocationPermission permission;
+
+    // Check if location services are enabled
+    serviceEnabled = await Geolocator.isLocationServiceEnabled();
+    if (!serviceEnabled) {
+      return null; // Location services are disabled
+    }
+
+    permission = await Geolocator.checkPermission();
+    if (permission == LocationPermission.denied) {
+      permission = await Geolocator.requestPermission();
+      if (permission == LocationPermission.denied) {
+        return null; // Location permissions are denied
+      }
+    }
+
+    if (permission == LocationPermission.deniedForever) {
+      return null; // Location permissions are permanently denied
+    }
+
+    try {
+      return await Geolocator.getCurrentPosition(desiredAccuracy: LocationAccuracy.high);
+    } catch (e) {
+      return null; // Error fetching location
+    }
+  }
 
   _onSubmit() async {
-    _formKey.currentState!.save();
-    
+    _formKey.currentState?.save();
+
     if (_formData['Password'] != _formData['rPassword']) {
       dialogBox(context, "Passwords do not match");
       return;
@@ -36,21 +67,32 @@ class _RegisterChildScreenState extends State<RegisterChildScreen> {
       );
 
       if (userCredential.user != null) {
-        DocumentReference<Map<String, dynamic>> db = 
-            FirebaseFirestore.instance.collection('users').doc(userCredential.user!.uid);
+        // Get current location
+        Position? position = await _determinePosition();
+
+        if (position == null) {
+          // If location is not found, show alert to the user
+          Navigator.of(context).pop(); // Dismiss the progress dialog
+          dialogBox(context, "Unable to retrieve location. Please reset the app and try again.");
+          return;
+        }
+
+        DocumentReference<Map<String, dynamic>> db = FirebaseFirestore.instance.collection('users').doc(userCredential.user!.uid);
 
         final user = UserModel(
-          name: _formData['name']!,
-          phone: _formData['phone']!,
-          childEmail: _formData['cemail']!,
-          parentEmail: _formData['gemail']!,
+          name: _formData['name'],
+          phone: _formData['phone'],
+          childEmail: _formData['cemail'],
+          parentEmail: _formData['gemail'],
           id: userCredential.user!.uid,
-          type: 'child'
+          type: 'child',
+          latitude: position.latitude, // Storing latitude
+          longitude: position.longitude, // Storing longitude
         );
 
         final jsonData = user.toJson();
         await db.set(jsonData);
-        print("Data added to Firestore");
+        print("Data and location added to Firestore");
 
         Navigator.of(context).pop(); // Dismiss the progress dialog
         goTo(context, LoginScreen());
@@ -109,10 +151,10 @@ class _RegisterChildScreenState extends State<RegisterChildScreen> {
                           Keyboardtype: TextInputType.name,
                           prefix: Icon(Icons.woman_2_rounded),
                           onsave: (name) {
-                            _formData['name'] = name ?? "";
+                            _formData['name'] = name;
                           },
                           validate: (name) {
-                            if (name!.isEmpty || name.length < 3) {
+                            if (name == null || name.isEmpty || name.length < 3) {
                               return "Enter a valid name";
                             }
                             return null;
@@ -124,10 +166,10 @@ class _RegisterChildScreenState extends State<RegisterChildScreen> {
                           Keyboardtype: TextInputType.phone,
                           prefix: Icon(Icons.phone),
                           onsave: (phone) {
-                            _formData['phone'] = phone ?? "";
+                            _formData['phone'] = phone;
                           },
                           validate: (phone) {
-                            if (phone!.isEmpty || phone.length < 10) {
+                            if (phone == null || phone.isEmpty || phone.length < 10) {
                               return "Enter a valid phone number";
                             }
                             return null;
@@ -139,10 +181,10 @@ class _RegisterChildScreenState extends State<RegisterChildScreen> {
                           Keyboardtype: TextInputType.emailAddress,
                           prefix: Icon(Icons.email),
                           onsave: (email) {
-                            _formData['cemail'] = email ?? "";
+                            _formData['cemail'] = email;
                           },
                           validate: (email) {
-                            if (email!.isEmpty || !email.contains("@")) {
+                            if (email == null || email.isEmpty || !email.contains("@")) {
                               return "Enter a valid email";
                             }
                             return null;
@@ -154,10 +196,10 @@ class _RegisterChildScreenState extends State<RegisterChildScreen> {
                           Keyboardtype: TextInputType.emailAddress,
                           prefix: Icon(Icons.email),
                           onsave: (gemail) {
-                            _formData['gemail'] = gemail ?? "";
+                            _formData['gemail'] = gemail;
                           },
                           validate: (gemail) {
-                            if (gemail!.isEmpty || !gemail.contains("@")) {
+                            if (gemail == null || gemail.isEmpty || !gemail.contains("@")) {
                               return "Enter a valid guardian email";
                             }
                             return null;
@@ -168,10 +210,10 @@ class _RegisterChildScreenState extends State<RegisterChildScreen> {
                           isPassword: isPasswordShown,
                           prefix: Icon(Icons.vpn_key_rounded),
                           onsave: (password) {
-                            _formData['Password'] = password ?? "";
+                            _formData['Password'] = password;
                           },
                           validate: (password) {
-                            if (password!.isEmpty || password.length < 7) {
+                            if (password == null || password.isEmpty || password.length < 7) {
                               return "Enter a valid password";
                             }
                             return null;
@@ -192,10 +234,10 @@ class _RegisterChildScreenState extends State<RegisterChildScreen> {
                           isPassword: isRetypePasswordShown,
                           prefix: Icon(Icons.vpn_key_rounded),
                           onsave: (rPassword) {
-                            _formData['rPassword'] = rPassword ?? "";
+                            _formData['rPassword'] = rPassword;
                           },
                           validate: (rPassword) {
-                            if (rPassword!.isEmpty || rPassword.length < 7) {
+                            if (rPassword == null || rPassword.isEmpty || rPassword.length < 7) {
                               return "Enter a valid password";
                             }
                             return null;
