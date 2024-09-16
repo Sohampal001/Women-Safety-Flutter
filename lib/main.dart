@@ -26,7 +26,7 @@ class MyApp extends StatelessWidget {
         colorScheme: ColorScheme.fromSeed(seedColor: Color.fromARGB(255, 58, 160, 183)),
         useMaterial3: true,
       ),
-      home: const AuthChecker(), // Updated to use a dedicated widget
+      home: const AuthChecker(),
     );
   }
 }
@@ -37,18 +37,18 @@ class AuthChecker extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return FutureBuilder<String?>(
-      future: MySharedPrefference.getUserEmail(), // Make sure this method exists
+      future: MySharedPrefference.getUserEmail(), // Ensure this method exists
       builder: (BuildContext context, AsyncSnapshot<String?> snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
-          return Center(child: CircularProgressIndicator()); // Show progress indicator while loading
+          return Center(child: CircularProgressIndicator());
         } else if (snapshot.hasError) {
-          return Center(child: Text('Error: ${snapshot.error}')); // Handle errors
+          return Center(child: Text('Error: ${snapshot.error}'));
         } else {
-          final userEmail = snapshot.data ?? ""; // Default to empty string if null
+          final userEmail = snapshot.data ?? "";
 
           if (userEmail.isNotEmpty) {
             Fluttertoast.showToast(msg: 'Logged in as: $userEmail');
-            return BottomPage(); // Navigate to the bottom page if user email is found
+            return BottomPage(); // Navigate to home page if user email is found
           } else {
             return LoginScreen(); // Show login screen if no user email is found
           }
