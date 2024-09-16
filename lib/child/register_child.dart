@@ -20,6 +20,7 @@ class _RegisterChildScreenState extends State<RegisterChildScreen> {
 
   final _formKey = GlobalKey<FormState>();
   final Map<String, String?> _formData = {};
+  String? _selectedGender;
 
   // Method to get current location
   Future<Position?> _determinePosition() async {
@@ -59,6 +60,11 @@ class _RegisterChildScreenState extends State<RegisterChildScreen> {
       return;
     }
 
+    if (_selectedGender == null) {
+      dialogBox(context, "Please select a gender");
+      return;
+    }
+
     progressIndicator(context);
     try {
       UserCredential userCredential = await FirebaseAuth.instance.createUserWithEmailAndPassword(
@@ -85,6 +91,7 @@ class _RegisterChildScreenState extends State<RegisterChildScreen> {
           childEmail: _formData['cemail'],
           parentEmail: _formData['gemail'],
           id: userCredential.user!.uid,
+          gender: _selectedGender, // Added gender field to the UserModel
           type: 'child',
           latitude: position.latitude, // Storing latitude
           longitude: position.longitude, // Storing longitude
@@ -145,6 +152,55 @@ class _RegisterChildScreenState extends State<RegisterChildScreen> {
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                       children: [
+                        Container(
+                          height: 60,
+                          width: double.infinity,
+                          decoration: BoxDecoration(
+                            border: Border.all(color: Color.fromARGB(255, 227, 143, 193), width: 2),
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(30),
+                          ),
+                          padding: EdgeInsets.symmetric(horizontal: 16),
+                          child: DropdownButtonFormField<String>(
+                            value: _selectedGender,
+                            hint: Text(
+                              "Select Gender",
+                              style: TextStyle(color: Colors.black, fontSize: 18),
+                            ),
+                            decoration: InputDecoration(
+                              border: InputBorder.none,
+                            ),
+                            dropdownColor: Colors.white,
+                            onChanged: (String? newValue) {
+                              setState(() {
+                                _selectedGender = newValue;
+                              });
+                            },
+                            onSaved: (value) {
+                              _selectedGender = value;
+                            },
+                            items: ['Male', 'Female', 'Other']
+                                .map<DropdownMenuItem<String>>((String value) {
+                              return DropdownMenuItem<String>(
+                                value: value,
+                                child: Text(
+                                  value,
+                                  style: TextStyle(color: Colors.black, fontSize: 18),
+                                ),
+                              );
+                            }).toList(),
+                            validator: (value) {
+                              if (value == null) {
+                                return 'Please select a gender';
+                              }
+                              return null;
+                            },
+                            iconEnabledColor: Colors.white,
+                          ),
+                        ),
+
+
+
                         CustomTextfield(
                           hintText: "Enter Name",
                           textInputAction: TextInputAction.next,
@@ -205,6 +261,9 @@ class _RegisterChildScreenState extends State<RegisterChildScreen> {
                             return null;
                           },
                         ),
+
+                       
+
                         CustomTextfield(
                           hintText: "Enter Password",
                           isPassword: isPasswordShown,
@@ -230,7 +289,7 @@ class _RegisterChildScreenState extends State<RegisterChildScreen> {
                           ),
                         ),
                         CustomTextfield(
-                          hintText: "Retype Password",
+                          hintText: "Re-Enter Password",
                           isPassword: isRetypePasswordShown,
                           prefix: Icon(Icons.vpn_key_rounded),
                           onsave: (rPassword) {
@@ -238,7 +297,7 @@ class _RegisterChildScreenState extends State<RegisterChildScreen> {
                           },
                           validate: (rPassword) {
                             if (rPassword == null || rPassword.isEmpty || rPassword.length < 7) {
-                              return "Enter a valid password";
+                              return "Re-Enter Password";
                             }
                             return null;
                           },
@@ -253,23 +312,25 @@ class _RegisterChildScreenState extends State<RegisterChildScreen> {
                                 : Icon(Icons.visibility),
                           ),
                         ),
+
+                        // Primary Button for Registration
                         primaryButton(
+                          title: "Register",
                           onPressed: () {
                             if (_formKey.currentState!.validate()) {
                               _onSubmit();
                             }
                           },
-                          title: "REGISTER",
+                        ),
+                        secondaryButton(
+                          title: "Already have an Account? Login",
+                          onPressed: () {
+                            goTo(context, LoginScreen());
+                          },
                         ),
                       ],
                     ),
                   ),
-                ),
-                secondaryButton(
-                  title: "Login with your account",
-                  onPressed: () {
-                    goTo(context, LoginScreen());
-                  },
                 ),
               ],
             ),
