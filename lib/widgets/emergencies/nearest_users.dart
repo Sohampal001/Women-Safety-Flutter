@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart'; // For user authentication
-import 'package:women_safety/db/shared_pref.dart'; // Make sure you have a method to get email from cookies
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:women_safety/db/shared_pref.dart'; // Ensure you have a method to get email from cookies
 import 'package:fluttertoast/fluttertoast.dart'; // Import for toast notifications
 import 'dart:math';
 import 'dart:async'; // Import for Timer
@@ -15,7 +15,7 @@ class NearestUsers extends StatefulWidget {
 class _NearestUsersState extends State<NearestUsers> {
   int nearbyUsersCount = 0;
   Position? currentUserPosition;
-  List<String> nearbyUserNames = [];
+  List<Map<String, dynamic>> nearbyUsersInfo = []; // Store nearby users' info including distance
   String? currentUserId; // Store the current user's UID
   Timer? _timer; // Timer for automatic detection
 
@@ -24,9 +24,10 @@ class _NearestUsersState extends State<NearestUsers> {
     super.initState();
     _getCurrentLocationAndNearbyUsers(); // Fetch nearby users immediately on load
 
-    // Set up a timer to detect nearby users every 10 seconds
-    _timer = Timer.periodic(Duration(seconds: 5), (Timer timer) {
-      _getCurrentLocationAndNearbyUsers();
+    // Set up a timer to track user's location every 10 seconds and store it in Firestore
+    _timer = Timer.periodic(Duration(seconds: 10), (Timer timer) {
+      _trackUserLocation(); // Track and update location every 10 seconds
+      _getCurrentLocationAndNearbyUsers(); // Fetch nearby users every 10 seconds
     });
   }
 
@@ -34,6 +35,38 @@ class _NearestUsersState extends State<NearestUsers> {
   void dispose() {
     _timer?.cancel(); // Cancel the timer when the widget is disposed
     super.dispose();
+  }
+
+  // Track and store user's location in Firestore every 10 seconds
+  Future<void> _trackUserLocation() async {
+    try {
+      currentUserPosition = await Geolocator.getCurrentPosition(
+        desiredAccuracy: LocationAccuracy.high,
+      );
+
+      if (currentUserPosition != null) {
+        // Get the currently logged-in user's UID
+        User? user = FirebaseAuth.instance.currentUser;
+        if (user != null) {
+          currentUserId = user.uid;
+
+          // Update user's location in Firestore
+          FirebaseFirestore firestore = FirebaseFirestore.instance;
+          DocumentReference userDoc = firestore.collection('users').doc(currentUserId);
+
+          // Update latitude and longitude fields in Firestore
+          await userDoc.update({
+            'latitude': currentUserPosition!.latitude,
+            'longitude': currentUserPosition!.longitude,
+          });
+
+          print("User location updated in Firestore.");
+        }
+      }
+    } catch (e) {
+      print("Error tracking location: $e");
+      _showLocationError(); // Handle error if location is not found
+    }
   }
 
   // Get the current user's location and then fetch nearby users
@@ -50,7 +83,7 @@ class _NearestUsersState extends State<NearestUsers> {
     }
   }
 
-  // Get the currently logged-in user's UID using the email stored in cookies and exclude them from the nearby users list
+  // Get the nearby users within 100 meters
   Future<void> _getNearbyUsers() async {
     String? email = await MySharedPrefference.getUserEmail(); // Fetch email from cookies
 
@@ -63,7 +96,7 @@ class _NearestUsersState extends State<NearestUsers> {
 
     FirebaseFirestore firestore = FirebaseFirestore.instance;
     QuerySnapshot usersSnapshot = await firestore.collection('users').get();
-    List<String> nearbyUsers = [];
+    List<Map<String, dynamic>> nearbyUsers = []; // List of nearby users' info
 
     for (var doc in usersSnapshot.docs) {
       var data = doc.data() as Map<String, dynamic>;
@@ -83,7 +116,10 @@ class _NearestUsersState extends State<NearestUsers> {
 
           // Check if the user is within 100 meters
           if (distance <= 0.1) {
-            nearbyUsers.add(data['name']); // Store the user's name
+            nearbyUsers.add({
+              'name': data['name'], // Store the user's name
+              'distance': distance * 1000 // Store the distance in meters
+            });
           }
         }
       }
@@ -91,7 +127,7 @@ class _NearestUsersState extends State<NearestUsers> {
 
     setState(() {
       nearbyUsersCount = nearbyUsers.length;
-      nearbyUserNames = nearbyUsers;
+      nearbyUsersInfo = nearbyUsers;
 
       // If no nearby users, show notification that the user is alone
       if (nearbyUsersCount == 1) {
@@ -157,11 +193,14 @@ class _NearestUsersState extends State<NearestUsers> {
       context: context,
       builder: (context) => AlertDialog(
         title: Text("Nearest Users"),
-        content: nearbyUserNames.isNotEmpty
+        content: nearbyUsersInfo.isNotEmpty
             ? Column(
                 mainAxisSize: MainAxisSize.min,
-                children: nearbyUserNames
-                    .map((name) => Text(name, style: TextStyle(fontSize: 16)))
+                children: nearbyUsersInfo
+                    .map((user) => Text(
+                          "${user['name']} - ${user['distance'].toStringAsFixed(2)} meters",
+                          style: TextStyle(fontSize: 16),
+                        ))
                     .toList(),
               )
             : Text("No nearby users found."),
