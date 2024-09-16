@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:women_safety/child/bottom_screens/add_contacts.dart';
-import 'package:women_safety/child/bottom_screens/chat_page.dart';
+import 'package:women_safety/child/bottom_screens/surrounded_by_men.dart';
 import 'package:women_safety/child/bottom_screens/child_home_page.dart';
 import 'package:women_safety/child/bottom_screens/profile_page.dart';
 import 'package:women_safety/child/bottom_screens/review_page.dart';
@@ -17,7 +17,7 @@ class _BottomPageState extends State<BottomPage> {
   List<Widget> pages=[
     HomeScreen(),
     AddContactsPage(),
-    ChatPage(),
+    SurroundedByMen(),
     ProfilePage(),
     ReviewPage(),
     
@@ -42,8 +42,8 @@ class _BottomPageState extends State<BottomPage> {
             label: 'Contacts',
           icon: Icon(Icons.contacts)),
           BottomNavigationBarItem(
-              label: 'Chats',
-          icon: Icon(Icons.chat)),
+              label: 'Near_Men',
+          icon: Icon(Icons.man)),
           BottomNavigationBarItem(
               label: 'Profile',
           icon: Icon(Icons.person)),
