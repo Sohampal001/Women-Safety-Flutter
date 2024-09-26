@@ -45,7 +45,7 @@ dependencies:
   url_launcher: ^6.3.0
   fluttertoast: ^8.2.6
   geolocator: ^12.0.0
-  google_maps_flutter: ^2.1.5
+  google_maps_flutter: ^2.2.2
   http: ^1.0.0
   json_annotation: ^4.8.0
   flutter_dotenv: ^5.0.2
