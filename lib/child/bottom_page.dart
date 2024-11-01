@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:women_safety/child/bottom_screens/add_contacts.dart';
+import 'package:women_safety/child/bottom_screens/recorded_page.dart';
 import 'package:women_safety/child/bottom_screens/surrounded_by_men.dart';
 import 'package:women_safety/child/bottom_screens/child_home_page.dart';
 import 'package:women_safety/child/bottom_screens/profile_page.dart';
 import 'package:women_safety/child/bottom_screens/review_page.dart';
+
 
 class BottomPage extends StatefulWidget {
   const BottomPage({super.key});
@@ -18,6 +20,7 @@ class _BottomPageState extends State<BottomPage> {
     HomeScreen(),
     AddContactsPage(),
     SurroundedByMen(),
+    RecordedFilesPage(),
     ProfilePage(),
     ReviewPage(),
     
@@ -45,12 +48,14 @@ class _BottomPageState extends State<BottomPage> {
               label: 'Near_Men',
           icon: Icon(Icons.man)),
           BottomNavigationBarItem(
+              label: 'recording',
+          icon: Icon(Icons.record_voice_over)),
+          BottomNavigationBarItem(
               label: 'Profile',
           icon: Icon(Icons.person)),
-          BottomNavigationBarItem(
-              label: 'Review',
-          icon: Icon(Icons.reviews))
+          
           ]),
+          
     );
   }
 }

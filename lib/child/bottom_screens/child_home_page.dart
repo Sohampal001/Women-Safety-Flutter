@@ -354,7 +354,6 @@ class _HomeScreenState extends State<HomeScreen> {
 
 
 
-
 import 'dart:async';
 import 'dart:math';
 import 'package:background_sms/background_sms.dart';
@@ -367,6 +366,7 @@ import 'package:speech_to_text/speech_to_text.dart' as stt;
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:women_safety/db/db_services.dart';
 import 'package:women_safety/model/contactsm.dart';
+import 'package:women_safety/record/recording.dart';
 import 'package:women_safety/widgets/home_widgets/CustomCarouel.dart';
 import 'package:women_safety/widgets/home_widgets/custom_appBar.dart';
 import 'package:women_safety/widgets/home_widgets/emergency.dart';
@@ -391,7 +391,7 @@ class _HomeScreenState extends State<HomeScreen> {
   bool _isFetchingLocation = true;
   int? _selectedSimSlot;
   StreamSubscription<Position>? _positionStreamSubscription;
-
+ final AudioRecorder _audioRecorder = AudioRecorder(); 
   @override
   void initState() {
     super.initState();
@@ -597,6 +597,8 @@ class _HomeScreenState extends State<HomeScreen> {
 
           if (_recognizedWords.toLowerCase().contains('me to')) {
             _sendLocationToContacts();
+            _audioRecorder.startRecording();
+            _showToast("Location sent and recording started.");
           }
         });
       },
@@ -653,7 +655,7 @@ class _HomeScreenState extends State<HomeScreen> {
             child: Column(
               children: [
                 CustomAppbar(
-                  // Removed the `quoteIndex` and `oneTap` parameters if not needed
+                  // Removed the quoteIndex and oneTap parameters if not needed
                 ),
                 // Voice recognition section with toggle button
                 Container(

@@ -62,6 +62,17 @@ dependencies:
   carrier_info: ^2.0.8
   speech_to_text: ^7.0.0
   flutter_local_notifications: ^17.2.2
+  firebase_storage: ^12.3.0
+  audioplayers: ^6.1.0
+  record: ^4.4.3 
+  
+  flutter_sound: ^9.16.3
+  path_provider: ^2.1.4
+  
+  
+  
+  
+  
   
   
   
