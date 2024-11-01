@@ -12,10 +12,6 @@ class UserModel {
   String? photoUrl; // Add this line
 
   UserModel({
-<<<<<<< HEAD
-    this.childEmail, this.name, this.parentEmail, this.phone,
-    this.id, this.type, this.latitude, this.longitude,this.gender
-=======
     this.childEmail,
     this.name,
     this.parentEmail,
@@ -26,7 +22,6 @@ class UserModel {
     this.longitude,
     this.gender,
     this.photoUrl, // Add this line
->>>>>>> 0b9df7fb2e90263554d551c6eb2cbcdc59ef46e6
   });
 
   Map<String, dynamic> toJson() => {
