@@ -7,8 +7,7 @@ import 'package:women_safety/components/secondaryButton.dart';
 import 'package:women_safety/child/child_login_screen.dart';
 import 'package:women_safety/model/user_model.dart';
 import 'package:women_safety/utils/constants.dart';
-import 'package:geolocator/geolocator.dart'; // Geolocator for fetching location
-
+import 'package:geolocator/geolocator.dart'; 
 class RegisterChildScreen extends StatefulWidget {
   @override
   State<RegisterChildScreen> createState() => _RegisterChildScreenState();

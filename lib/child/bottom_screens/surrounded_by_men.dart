@@ -280,7 +280,7 @@ class _SurroundedByMenState extends State<SurroundedByMen> {
   Future<void> _getCurrentLocation() async {
     try {
       _currentPosition = await Geolocator.getCurrentPosition(
-        desiredAccuracy: LocationAccuracy.high,
+        desiredAccuracy: LocationAccuracy.bestForNavigation,
       );
       setState(() {});
     } catch (e) {

@@ -16,61 +16,66 @@ class AddContactsPage extends StatefulWidget {
 }
 
 class _AddContactsPageState extends State<AddContactsPage> {
-  DatabaseHelper databaseHelper= DatabaseHelper();
+  DatabaseHelper databaseHelper = DatabaseHelper();
   List<Tcontact>? contactList;
-  int count=0;
-  void showList(){
-      Future<Database> dbFuture=databaseHelper.initializeDatabase();
-      dbFuture.then((database){
-      Future<List<Tcontact>> contactListFuture=  databaseHelper.getContactList();
-        contactListFuture.then((value){
-          setState(() {
-            this.contactList=value;
-            this.count=value.length;
-          });
+  int count = 0;
+  void showList() {
+    Future<Database> dbFuture = databaseHelper.initializeDatabase();
+    dbFuture.then((database) {
+      Future<List<Tcontact>> contactListFuture =
+          databaseHelper.getContactList();
+      contactListFuture.then((value) {
+        setState(() {
+          this.contactList = value;
+          this.count = value.length;
         });
       });
+    });
   }
 
-  void deleteContact(Tcontact contact)async{
-    int result= await databaseHelper.deleteContact(contact.id);
-    if (result!=0) {
+  void deleteContact(Tcontact contact) async {
+    int result = await databaseHelper.deleteContact(contact.id);
+    if (result != 0) {
       Fluttertoast.showToast(msg: "Contact removed Succesfully");
       showList();
     }
   }
+
   @override
   void initState() {
-    WidgetsBinding.instance.addPostFrameCallback((timeStamp){
-    showList();
-
+    WidgetsBinding.instance.addPostFrameCallback((timeStamp) {
+      showList();
     });
     super.initState();
   }
-  
+
   @override
   Widget build(BuildContext context) {
-    if (contactList==null) {
-      contactList=[];
+    if (contactList == null) {
+      contactList = [];
     }
     return SafeArea(
       child: Container(
-      padding: EdgeInsets.all(12),
+        padding: EdgeInsets.all(12),
         child: Column(
           children: [
-            primaryButton(onPressed: ()async{
-              bool result= await Navigator.push(context,
-               MaterialPageRoute(builder: (context)=>ContactsPage(),
-               ));
-               if (result==true) {
-                 showList();
-               }
-            }, title: 'Add trusted contacts'),
+            primaryButton(
+                onPressed: () async {
+                  bool result = await Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => ContactsPage(),
+                      ));
+                  if (result == true) {
+                    showList();
+                  }
+                },
+                title: 'Add trusted contacts'),
             Expanded(
               child: ListView.builder(
                 // shrinkWrap: true,
                 itemCount: count,
-                itemBuilder: (BuildContext context,int index){
+                itemBuilder: (BuildContext context, int index) {
                   return Card(
                     child: Padding(
                       padding: const EdgeInsets.all(8.0),
@@ -79,14 +84,22 @@ class _AddContactsPageState extends State<AddContactsPage> {
                         trailing: Container(
                           width: 100,
                           child: Row(
-                            children: [IconButton(onPressed: ()async{
-                                await FlutterPhoneDirectCaller.callNumber(contactList![index].number);
-                              },icon: Icon(Icons.call),
-                              color: Colors.red,),
-                              IconButton(onPressed: (){
-                                deleteContact(contactList![index]);
-                              },icon: Icon(Icons.delete),
-                              color: Colors.red,),
+                            children: [
+                              IconButton(
+                                onPressed: () async {
+                                  await FlutterPhoneDirectCaller.callNumber(
+                                      contactList![index].number);
+                                },
+                                icon: Icon(Icons.call),
+                                color: Colors.red,
+                              ),
+                              IconButton(
+                                onPressed: () {
+                                  deleteContact(contactList![index]);
+                                },
+                                icon: Icon(Icons.delete),
+                                color: Colors.red,
+                              ),
                             ],
                           ),
                         ),
