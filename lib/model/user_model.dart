@@ -9,7 +9,7 @@ class UserModel {
 
   double? latitude;
   double? longitude;
-  String? photoUrl; // Add this line
+  String? photoUrl;
 
   UserModel({
     this.childEmail,
@@ -21,7 +21,7 @@ class UserModel {
     this.latitude,
     this.longitude,
     this.gender,
-    this.photoUrl, // Add this line
+    this.photoUrl,
   });
 
   Map<String, dynamic> toJson() => {

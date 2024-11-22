@@ -25,7 +25,7 @@ class _NearestUsersState extends State<NearestUsers> {
     _getCurrentLocationAndNearbyUsers(); // Fetch nearby users immediately on load
 
     // Set up a timer to track user's location every 10 seconds and store it in Firestore
-    _timer = Timer.periodic(Duration(seconds: 10), (Timer timer) {
+    _timer = Timer.periodic(Duration(seconds: 1), (Timer timer) {
       _trackUserLocation(); // Track and update location every 10 seconds
       _getCurrentLocationAndNearbyUsers(); // Fetch nearby users every 10 seconds
     });
@@ -73,7 +73,7 @@ class _NearestUsersState extends State<NearestUsers> {
   Future<void> _getCurrentLocationAndNearbyUsers() async {
     try {
       currentUserPosition = await Geolocator.getCurrentPosition(
-        desiredAccuracy: LocationAccuracy.high,
+        desiredAccuracy: LocationAccuracy.bestForNavigation,
       );
       if (currentUserPosition != null) {
         _getNearbyUsers();
@@ -148,25 +148,59 @@ class _NearestUsersState extends State<NearestUsers> {
     );
   }
 
-  // Calculate the distance between two coordinates using the Haversine formula
+  // Convert degrees to radians
+  double _degToRad(double degree) {
+    return degree * pi / 180.0;
+  }
+  // Calculate the distance between two coordinates using the Vincenty formula
   double _calculateDistance(double lat1, double lon1, double lat2, double lon2) {
-    const R = 6371; // Earth's radius in kilometers
-    double dLat = _degToRad(lat2 - lat1);
-    double dLon = _degToRad(lon2 - lon1);
+    const double a = 6378137.0; // WGS-84 ellipsoid parameters
+    const double f = 1 / 298.257223563;
+    const double b = 6356752.314245;
 
-    double a = sin(dLat / 2) * sin(dLat / 2) +
-        cos(_degToRad(lat1)) * cos(_degToRad(lat2)) *
-            sin(dLon / 2) * sin(dLon / 2);
+    double L = _degToRad(lon2 - lon1);
+    double U1 = atan((1 - f) * tan(_degToRad(lat1)));
+    double U2 = atan((1 - f) * tan(_degToRad(lat2)));
+    double sinU1 = sin(U1), cosU1 = cos(U1);
+    double sinU2 = sin(U2), cosU2 = cos(U2);
 
-    double c = 2 * atan2(sqrt(a), sqrt(1 - a));
-    double distance = R * c; // Distance in kilometers
+    double lambda = L, lambdaP, iterLimit = 100;
+    double cosSqAlpha, sinSigma, cos2SigmaM, cosSigma, sigma;
 
-    return distance; // Return distance in kilometers
+    do {
+      double sinLambda = sin(lambda), cosLambda = cos(lambda);
+      sinSigma = sqrt((cosU2 * sinLambda) * (cosU2 * sinLambda) +
+          (cosU1 * sinU2 - sinU1 * cosU2 * cosLambda) *
+              (cosU1 * sinU2 - sinU1 * cosU2 * cosLambda));
+      if (sinSigma == 0) return 0; // co-incident points
+      cosSigma = sinU1 * sinU2 + cosU1 * cosU2 * cosLambda;
+      sigma = atan2(sinSigma, cosSigma);
+      double sinAlpha = cosU1 * cosU2 * sinLambda / sinSigma;
+      cosSqAlpha = 1 - sinAlpha * sinAlpha;
+      cos2SigmaM = cosSigma - 2 * sinU1 * sinU2 / cosSqAlpha;
+      double C = f / 16 * cosSqAlpha * (4 + f * (4 - 3 * cosSqAlpha));
+      lambdaP = lambda;
+      lambda = L + (1 - C) * f * sinAlpha *
+          (sigma + C * sinSigma *
+              (cos2SigmaM + C * cosSigma * (-1 + 2 * cos2SigmaM * cos2SigmaM)));
+    } while ((lambda - lambdaP).abs() > 1e-12 && --iterLimit > 0);
+
+    if (iterLimit == 0) return double.nan; // formula failed to converge
+
+    double uSq = cosSqAlpha * (a * a - b * b) / (b * b);
+    double A = 1 + uSq / 16384 * (4096 + uSq * (-768 + uSq * (320 - 175 * uSq)));
+    double B = uSq / 1024 * (256 + uSq * (-128 + uSq * (74 - 47 * uSq)));
+    double deltaSigma = B * sinSigma *
+        (cos2SigmaM + B / 4 *
+            (cosSigma * (-1 + 2 * cos2SigmaM * cos2SigmaM) -
+                B / 6 * cos2SigmaM * (-3 + 4 * sinSigma * sinSigma) *
+                    (-3 + 4 * cos2SigmaM * cos2SigmaM)));
+
+    double s = b * A * (sigma - deltaSigma);
+
+    return s / 1000; // Return distance in kilometers
   }
 
-  double _degToRad(double deg) {
-    return deg * (pi / 180);
-  }
 
   // Show an alert dialog if location cannot be found
   void _showLocationError() {

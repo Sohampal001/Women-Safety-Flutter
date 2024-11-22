@@ -32,8 +32,4 @@ class Tcontact{
     this._number=map['number'];
     this._name=map['name'];
   }
-  
-
-
-
 }
